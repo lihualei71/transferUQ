@@ -1,0 +1,82 @@
+---
+title: "An introduction to `transferUQ` package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{transferUQ_demo}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library("transferUQ")
+library("tidyverse")
+library("latex2exp")
+set.seed(1)
+```
+
+```{r}
+## Load data and generate transfer deterioration and inverse normalized transfer error
+data("CertaintyEquivalents")
+transfer_error <- CertaintyEquivalents$unnormalized
+normalized_transfer <- CertaintyEquivalents$normalized
+transfer_deterioration <- lapply(transfer_error, function(err){
+    t(t(err) / diag(err))
+})
+inv_normalized_transfer <- lapply(normalized_transfer, function(err){
+    1 / err
+})
+```
+
+```{r, fig.height = 4, fig.width = 6, fig.align = "center"}
+## Confidence bounds for expected inverse normalized transfer errors
+exp_bounds <-
+    lapply(names(inv_normalized_transfer), function(model){
+    interval <- ETE_interval(inv_normalized_transfer[[model]], 0.2)
+    data.frame(model = model,
+               lb = interval[1],
+               ub = interval[2])
+}) %>% Reduce(rbind, .) %>%
+    mutate(model = recode(model, `EU_iso` = "EU", `kernel_ridge_rbf` = "Ridge"))
+    
+exp_plot <- exp_bounds %>%
+    ggplot(aes(x = model, color = model)) +
+    geom_errorbar(aes(ymin = lb, ymax = ub)) +
+    coord_flip() +
+    theme_bw() + 
+    theme(legend.position = "none",
+          panel.grid = element_blank()) +
+    ylab("Expected inverse normalized transfer error") +
+    xlab("Model")
+exp_plot
+```
+
+```{r, fig.height = 4, fig.width = 6, fig.align = "center"}
+## Confidence bounds for median (unnormalized) transfer errors
+med_bounds <-
+    lapply(names(transfer_error), function(model){
+    interval <- QTE_interval(transfer_error[[model]], 0.2, 0.5)
+    data.frame(model = model,
+               lb = interval$lb[1],
+               ub = interval$ub[1])
+}) %>% Reduce(rbind, .) %>%
+    mutate(model = recode(model, `EU_iso` = "EU", `kernel_ridge_rbf` = "Ridge"))
+    
+med_plot <- med_bounds %>%
+    ggplot(aes(x = model, color = model)) +
+    geom_errorbar(aes(ymin = lb, ymax = ub)) +
+    coord_flip() +
+    theme_bw() + 
+    theme(legend.position = "none",
+          panel.grid = element_blank()) +
+    ylab("Median transfer error") +
+    xlab("Model")
+med_plot
+```
+
