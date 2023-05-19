@@ -11,6 +11,8 @@ An object of class \code{list} of length 2.
 CertaintyEquivalents
 }
 \description{
-Transfer error matrices on certainty equivalents for binary lotteries
+\code{CertaintyEquivalents$unnormalized} and \code{CertaintyEquivalents$normalized}
+record the unnormalized and normalized transfer errors on the
+certainty equivalents dataset for 17 models across 44 domains.
 }
 \keyword{datasets}

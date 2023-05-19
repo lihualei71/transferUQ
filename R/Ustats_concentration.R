@@ -3,16 +3,19 @@ h1 <- function(y, mu){
     y * log(y / mu) + (1 - y) * log((1 - y) / (1 - mu))
 }
 
+## Hoeffding bound (Proposition A.1 (1))
 ustat_hoeffding_upper <- function(mu, x, n, k){
     n <- floor(n / k)
     -n * h1(pmin(mu, x), mu)
 }
 
+## Bentkus bound (Proposition A.1 (2))
 ustat_bentkus_upper <- function(mu, x, n, k){
     n <- floor(n / k)
     log(pbinom(ceiling(n * x), n, mu, lower.tail = TRUE)) + 1
 }
 
+## Maurer bound (Proposition A.2)
 ustat_maurer_upper <- function(mu, x, n, k){
     lambda_fun <- function(lambda){
         Glambda <- exp(lambda) - lambda - 1
@@ -37,6 +40,7 @@ ustat_maurer_upper <- function(mu, x, n, k){
     logprob
 }
 
+## Hoeffding-Bentkus-Maurer bound
 ustat_HBM_upper <- function(mu, x, n, k){
     hoeffding_logtail <- ustat_hoeffding_upper(mu, x, n, k)
     bentkus_logtail <- ustat_bentkus_upper(mu, x, n, k)
@@ -45,8 +49,12 @@ ustat_HBM_upper <- function(mu, x, n, k){
 }
 
 #' Inverse of \eqn{B_{n, k}(x; \mu)} at \eqn{alpha} given \eqn{x} or
-#' \eqn{\mu} val measures "x" if type = "mu" and "mu" if
-#' type = "x". Setting type = "x" yields \eqn{\inf{y: B_{n, k}(y; \mu) \ge \alpha}} and setting type = "mu" yields
+#' \eqn{\mu}.
+#'
+#' \code{val} measures "x" if \code{type = "mu"} and "mu" if
+#' \code{type = "x"}. Setting \code{type = "x"} yields
+#' \eqn{\inf{y: B_{n, k}(y; \mu) \ge \alpha}}
+#' and setting \code{type = "mu"} yields
 #' \eqn{\inf{\nu: B_{n, k}(x; \nu) \ge \alpha}}
 #' 
 #' @param val the value for either "x" or "mu"
@@ -56,6 +64,9 @@ ustat_HBM_upper <- function(mu, x, n, k){
 #' @param type see Details
 #'
 #' @return the inverse of \eqn{B_{n, k}(x; \mu)}
+#'
+#' @noRd
+#' @keywords internal
 inv_ustat_HBM_upper <- function(val, n, k, alpha,
                                 type = c("x", "mu")){
     type <- type[1]

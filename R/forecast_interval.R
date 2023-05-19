@@ -1,99 +1,112 @@
-sort_2d_offdiag <- function(mat){
-    n <- nrow(mat)
-    diag(mat) <- NA
-    vec <- as.vector(mat)
-    res <- sort(vec, na.last = TRUE, index.return = TRUE)
-    colid <- ceiling(res$ix / n)
-    rowid <- res$ix - (colid - 1) * n
-    res <- data.frame(row = rowid, col = colid, val = res$x)
-    res[!is.na(res$val), ]
-}
-
-Qj_Gamma <- function(Psi, j, Gamma){
-    n <- length(Psi)
-    Psibar <- cumsum(sort(Psi)) / (1:n)
-    min((Psibar - j/n) / (1 + n / (Gamma^2 - 1) / (1:n))) + j/n
-}
-
-etau_Gamma <- function(errmat, tau, Gamma){
-    n <- nrow(errmat)
-    sort_df <- sort_2d_offdiag(errmat)
-    jstart <- ceiling(tau * n * (n - 1))
-    for (j in jstart:(n*(n-1))){
-        Psi <- as.numeric(table(as.factor(sort_df$col)[1:j]))
-        Qj <- Qj_Gamma(Psi, j, Gamma)
-        if (Qj >= tau * n){
-            break
-        }
-    }
-    return(sort_df$val[j])
-}
-
-#' The worst-case transfer error \eqn{\bar{e}_{\tau}(\Gamma)} as
-#' a function of \eqn{\tau} for a given \eqn{\Gamma}.
+#' Forecast intervals for transfer errors
 #'
-#' @param errmat a square matrix with \code{errmat[i, j]} being the transfer error using the i-th domain for training and j-th domain for testing
-#' @param Gamma the Gamma value for selection bias
+#' \code{forecast_interval} generates one- or two-sided forecast
+#' intervals for transfer errors (Section 3) with a given
+#' coverage level with or without finite-sample correction. 
 #'
-#' @return a data.frame with two columns: \code{prob} for all turning points of \eqn{\tau} where \eqn{\bar{e}_{\tau}(\Gamma)} changes and \code{val} for the corresponding bounds
-#'
-#' @export
-Gamma_curve <- function(errmat, Gamma){
-    n <- nrow(errmat)
-    m <- n * (n - 1)
-    sort_df <- sort_2d_offdiag(errmat)
-    Qvec <- rep(m)
-    for (j in 1:m){
-        Psi <- as.numeric(table(as.factor(sort_df$col)[1:j]))
-        Qvec[j] <- Qj_Gamma(Psi, j, Gamma)
-    }
-    data.frame(prob = Qvec / (n - 1), val = sort_df$val)
-}
-
-#' Check if method 1 everywhere-upper-dominates method 2
-#' at the tau-th quantile
-#'
-#' @param errmat1 a square matrix with \code{errmat[i, j]} being the transfer error using the i-th domain for training and j-th domain for testing for method 1
-#' @param errmat2 the error matrix for method 2
-#' @param tau the quantile at which the methods are compared
-#'
-#' @return a logical indicating whether method 1 everywhere-upper-dominates method 2 at the tau-th quantile
+#' @details \code{err} should be in one of the following forms.
+#' \itemize{
+#' \item A square asymmetric matrix when the number of training domains \eqn{r = 1}. In this case, \code{err[i, j]} records the transfer error using the i-th domain for training and j-th domain for testing.
+#' \item A data.frame with \eqn{(r+2)} columns. The last column records the transfer errors, the second last column records the indices of test domains, and the first r columns record the indices of training domains.
+#' \item (Not recommended) a data.frame with two columns. The second column records the transfer errors and the first column records the indices of test domains. 
+#' }
+#' For this version, it is recommended to include the transfer errors for all n-choose-(r+1) combinations of training and test domains.
+#' Otherwise, \code{forecast_interval} can still
+#' output an interval, though the theoretical guarantee is unclear.
+#' When \code{correction = FALSE}, the output is
+#' \itemize{
+#' \item \eqn{[\underline{e}_{(1+\tau)/2}^{\mathbf{M}}, \overline{e}_{(1+\tau)/2}^{\mathbf{M}}]} when \code{side = "two"};
+#' \item \eqn{[\underline{e}_{\tau}^{\mathbf{M}}, \infty)} when \code{side = "left"};
+#' \item \eqn{(-\infty, \overline{e}_{\tau}^{\mathbf{M}}]} when \code{side = "right"},
+#' }
+#' where \eqn{\tau} is given by \code{coverage}. The theoretical
+#' lower bound for coverage is smaller than \eqn{\tau} (Proposition 1) with the gap \eqn{O(r/n)}.
 #' 
+#' When \code{correction = TRUE}, it first multiplies \code{coverage} by \eqn{(n + 1) / (n - r)} and then outputs the above interval.
+#' Proposition 1 implies that the coverage is lower bounded by \eqn{\tau} in finite samples.
+#' 
+#' @param err error object; see Details
+#' @param coverage target coverage level
+#' @param side "two" for two-sided, "left" for intervals of form \eqn{[a, \infty)}, "right" for intervals of form \eqn{(-\infty, a]}
+#' @param correction TRUE if correction is performed to guarantee the coverage is below \code{alpha} in finite samples; FALSE if not correction is performed; see Details
+#'
+#' @return an interval as a vector of length 2
+#'
+#' @examples
+#' \donttest{# Generate an error matrix
+#' n <- 100
+#' set.seed(1)
+#' errmat <- matrix(runif(n^2), nrow = n)
+#' diag(errmat) <- NA
+#'
+#' # Two-sided forecast intervals without and with finite-sample correction
+#' forecast_interval(errmat, 0.9, "two", correction = FALSE)
+#' forecast_interval(errmat, 0.9, "two", correction = TRUE)
+#'
+#' # One-sided forecast intervals without and with finite-sample correction
+#' forecast_interval(errmat, 0.9, "left", correction = FALSE)
+#' forecast_interval(errmat, 0.9, "left", correction = TRUE)
+#' forecast_interval(errmat, 0.9, "right", correction = FALSE)
+#' forecast_interval(errmat, 0.9, "right", correction = TRUE)
+#'
+#' # Generate an error data.frame with r+2=3 columns
+#' idx <- expand.grid(train = 1:n, test = 1:n)
+#' errdf <- cbind(idx, data.frame(val = as.numeric(errmat)))
+#' errdf <- errdf[!is.na(errdf$val), ]
+#' forecast_interval(errdf, 0.9, "two", correction = FALSE)
+#' forecast_interval(errmat, 0.9, "two", correction = FALSE)
+#'
+#' # Generate an error data.frame with only two columns (not recommended)
+#' errdf2 <- errdf[, 2:3]
+#' forecast_interval(errdf2, 0.9, "two", correction = FALSE)
+#'
+#' # Generate an error data.frame with r>1
+#' n <- 40
+#' set.seed(1)
+#' idx <- expand.grid(train1 = 1:n, train2 = 1:n, test = 1:n)
+#' idx <- idx[idx$train1 != idx$train2 & idx$train1 != idx$test & idx$train2 != idx$test, ]
+#' err <- cbind(idx, data.frame(val = runif(nrow(idx))))
+#' 
+#' # Two-sided forecast intervals without and with finite-sample correction
+#' forecast_interval(err, 0.9, "two", correction = FALSE)
+#' forecast_interval(err, 0.9, "two", correction = TRUE)
+#'
+#' # One-sided forecast intervals without and with finite-sample correction
+#' forecast_interval(err, 0.9, "left", correction = FALSE)
+#' forecast_interval(err, 0.9, "left", correction = TRUE)
+#' forecast_interval(err, 0.9, "right", correction = FALSE)
+#' forecast_interval(err, 0.9, "right", correction = TRUE)
+#' 
+#' }
 #' @export
-check_everywhere_dominance <- function(errmat1, errmat2, tau){
-    n <- nrow(errmat1)
-    err1 <- sort_2d_offdiag(errmat1)
-    err2 <- sort_2d_offdiag(errmat2)
-    jstart <- ceiling(tau * n * (n - 1))
-    flag <- TRUE
-    for (j in jstart:(n*(n-1))){
-        val <- err2$val[j]
-        idx <- which(err1$val >= val)
-        if (length(idx) == 0){
-            ## All realized errors of method 1 are smaller
-            return(TRUE)
-        }
-        idx <- min(idx) - 1
-        Psi2 <- as.numeric(table(as.factor(err2$col)[1:j]))
-        Psi1 <- as.numeric(table(as.factor(err1$col)[1:idx]))
-        if (all(Psi2 <= Psi1)){
-            next
-        }
-        if (min(Psi1) / (n - 1) > tau){
-            next
-        } else if (lp_subproblem(Psi1, Psi2, tau) <= tau){
-            flag <- FALSE
-            break
-        }
+forecast_interval <- function(err, coverage,
+                              side = c("two", "left", "right"),
+                              correction = FALSE){
+    side <- side[1]
+    err_obj <- standardize_err(err)
+    err <- err_obj$err
+    n <- err_obj$n    
+    r <- err_obj$r
+    if (correction && is.na(r)){
+        stop("Finite sample correction cannot be performed without r")
     }
-    return(flag)
-}
-
-lp_subproblem <- function(Psi1, Psi2, tau){
-    n <- length(Psi1)
-    objective <- Psi1
-    constraint <- rbind(Psi2, diag(rep(1, n)), rep(1, n))
-    dir <- c(rep(">=", n+1), "=")
-    rhs <- c(tau, rep(0, n), 1)
-    lpSolve::lp("min", objective, constraint, dir, rhs)$objval / (n - 1)
+    if (correction){
+        coverage <- min((n + 1) / (n - r) * coverage, 1)
+    }
+    if (side == "two"){
+        tau <- (1 + coverage) / 2
+        CI_left <- -quantile(-err$val, tau, type = 1)
+        CI_right <- quantile(err$val, tau, type = 1)
+    } else if (side == "left"){
+        tau <- coverage
+        CI_left <- -quantile(-err$val, tau, type = 1)
+        CI_right <- Inf
+    } else if (side == "right"){
+        tau <- coverage
+        CI_left <- -Inf
+        CI_right <- quantile(err$val, tau, type = 1)
+    }
+    CI_left <- as.numeric(CI_left)
+    CI_right <- as.numeric(CI_right)
+    return(c(CI_left, CI_right))    
 }

@@ -22,7 +22,7 @@ set.seed(1)
 ```
 
 ```{r}
-## Load data and generate transfer deterioration and inverse normalized transfer error
+## Load "CertaintyEquivalents" data used in the paper
 data("CertaintyEquivalents")
 transfer_error <- CertaintyEquivalents$unnormalized
 normalized_transfer <- CertaintyEquivalents$normalized
@@ -35,10 +35,10 @@ inv_normalized_transfer <- lapply(normalized_transfer, function(err){
 ```
 
 ```{r, fig.height = 4, fig.width = 6, fig.align = "center"}
-## Confidence bounds for expected inverse normalized transfer errors
+## 80% confidence intervals for expected inverse normalized transfer errors
 exp_bounds <-
     lapply(names(inv_normalized_transfer), function(model){
-    interval <- ETE_interval(inv_normalized_transfer[[model]], 0.2)
+    interval <- ete_interval(inv_normalized_transfer[[model]], 0.8, "two")
     data.frame(model = model,
                lb = interval[1],
                ub = interval[2])
@@ -58,10 +58,10 @@ exp_plot
 ```
 
 ```{r, fig.height = 4, fig.width = 6, fig.align = "center"}
-## Confidence bounds for median (unnormalized) transfer errors
+## 80% confidence intervals for median (unnormalized) transfer errors
 med_bounds <-
     lapply(names(transfer_error), function(model){
-    interval <- QTE_interval(transfer_error[[model]], 0.2, 0.5)
+    interval <- qte_interval(transfer_error[[model]], 0.8, betas = 0.5)
     data.frame(model = model,
                lb = interval$lb[1],
                ub = interval$ub[1])
