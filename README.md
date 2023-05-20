@@ -2,7 +2,7 @@
 An R package for uncertainty quantification of transfer performance for prediction models
 
 ## Overview
-This R package implements the forecast intervals and confidence intervals on transfer errors of prediction models using observations from multiple domains, along with the comparison between two prediction models in terms of worst-case- and everywhere-dominance. All methods are introduced in our paper: [The Transfer Performance of Economics Models](https://lihualei71.github.io/Theory_Transfer.pdf). It also includes the dataset `CertaintyEquivalents` analyzed in the paper, which includes unnormalized and normalized transfer error matrices on certainty equivalents for binary lotteries from 44 domains. A full description of all functions can be found in the manual or the [package site] ()
+This R package implements the forecast intervals and confidence intervals on transfer errors of prediction models using observations from multiple domains, along with the comparison between two prediction models in terms of worst-case- and everywhere-dominance. All methods are introduced in our paper: [The Transfer Performance of Economics Models](https://lihualei71.github.io/Theory_Transfer.pdf). It also includes the dataset `CertaintyEquivalents` analyzed in the paper, which includes unnormalized and normalized transfer error matrices on certainty equivalents for binary lotteries from 44 domains. A full description of all functions can be found in the manual.
 
 ## Installation         
 
