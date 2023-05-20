@@ -15,7 +15,7 @@ lp_subproblem <- function(Psi1, Psi2, tau){
 #' Check if method 1 everywhere-upper-dominates method 2
 #' 
 #' \code{check_everywhere_dominance} evaluates whether method 1
-#' everywhere-upper-dominates method 2 at the tau-th quantile
+#' everywhere-upper-dominates method 2 at the \eqn{\tau}-th quantile
 #' (Appendix Q.2).
 #'
 #' @details \code{err} should be in one of the following forms.

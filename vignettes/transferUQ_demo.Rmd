@@ -35,6 +35,29 @@ inv_normalized_transfer <- lapply(normalized_transfer, function(err){
 ```
 
 ```{r, fig.height = 4, fig.width = 6, fig.align = "center"}
+## 80% forecast intervals for transfer deterioration
+forecast_bounds <-
+    lapply(names(transfer_deterioration), function(model){
+    interval <- forecast_interval(transfer_deterioration[[model]], 0.8, "two")
+    data.frame(model = model,
+               lb = interval[1],
+               ub = interval[2])
+}) %>% Reduce(rbind, .) %>%
+    mutate(model = recode(model, `EU_iso` = "EU", `kernel_ridge_rbf` = "Ridge"))
+    
+forecast_plot <- forecast_bounds %>%
+    ggplot(aes(x = model, color = model)) +
+    geom_errorbar(aes(ymin = lb, ymax = ub)) +
+    coord_flip() +
+    theme_bw() + 
+    theme(legend.position = "none",
+          panel.grid = element_blank()) +
+    ylab("Transfer deterioration") +
+    xlab("Model")
+forecast_plot
+```
+
+```{r, fig.height = 4, fig.width = 6, fig.align = "center"}
 ## 80% confidence intervals for expected inverse normalized transfer errors
 exp_bounds <-
     lapply(names(inv_normalized_transfer), function(model){
@@ -79,4 +102,12 @@ med_plot <- med_bounds %>%
     xlab("Model")
 med_plot
 ```
+```{r}
+## Compare CPT and RF in terms of worst-case-upper-dominance
+check_worstcase_dominance(transfer_error[["abdg"]], transfer_error[["RF"]])
+```
 
+```{r}
+## Compare CPT and RF in terms of everywhere-upper-dominance
+check_everywhere_dominance(transfer_error[["abdg"]], transfer_error[["RF"]])
+```

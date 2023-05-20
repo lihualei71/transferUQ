@@ -20,7 +20,7 @@ a data.frame with two columns: the first column records the values of \eqn{\tau}
 }
 \description{
 \code{check_worstcase_dominance} evaluates whether method 1
-worst-case-upper-dominates method 2 at the tau-th quantile over
+worst-case-upper-dominates method 2 at the \eqn{\tau}-th quantile over
 \eqn{w\in [\Gamma^{-1}, \Gamma]}. The definition in Appendix Q.1
 corresponds to \eqn{\Gamma = \infty}.
 }
